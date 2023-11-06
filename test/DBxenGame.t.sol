@@ -20,7 +20,8 @@ contract XenGameTest is Test {
     address public xenCrypto = 0x06450dEe7FD2Fb8E39061434BAbCFC05599a6Fb8;
     NFTRegistry public nftRegistry;
     IxenNFTContract public nftContract;
-    address public nftContractAddress = 0x0a252663DBCc0b073063D6420a40319e438Cfa59;
+    address public nftContractAddress = 0x22c3f74d4AA7c7e11A7637d589026aa85c7AF88a; 
+    address public nftFactoryAddress = 0xA06735da049041eb523Ccf0b8c3fB9D36216c646;
     uint256 public initialBalance = 1 ether;
     XenGame public xenGameInstance;
     PlayerNameRegistry public playerNameRegistry;
@@ -29,7 +30,7 @@ contract XenGameTest is Test {
         //priceOracleInstance = new PriceOracle();
 
         playerNameRegistry = new PlayerNameRegistry(payable(address(4)), payable(address(5)));
-        nftRegistry = new NFTRegistry(nftContractAddress);
+        nftRegistry = new NFTRegistry(nftContractAddress, nftFactoryAddress);
         XenBurnInstance = new xenBurn( xenCrypto, address(playerNameRegistry));
         xenGameInstance =
             new XenGame(nftContractAddress, address(nftRegistry), address(XenBurnInstance), address(playerNameRegistry));

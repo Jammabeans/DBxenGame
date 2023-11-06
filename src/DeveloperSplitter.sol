@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+//import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract DeveloperSplitter {
     address public dev1;
@@ -33,14 +33,14 @@ contract DeveloperSplitter {
         payable(dev3).transfer(eachShare);
     }
 
-    function withdrawERC20(IERC20 token) public {
-        uint256 contractBalance = token.balanceOf(address(this));
-        require(contractBalance > 0, "Contract balance is empty");
+    // function withdrawERC20(IERC20 token) public {
+    //     uint256 contractBalance = token.balanceOf(address(this));
+    //     require(contractBalance > 0, "Contract balance is empty");
 
-        uint256 eachShare = contractBalance / 3;
+    //     uint256 eachShare = contractBalance / 3;
 
-        require(token.transfer(dev1, eachShare), "Transfer to dev1 failed");
-        require(token.transfer(dev2, eachShare), "Transfer to dev2 failed");
-        require(token.transfer(dev3, eachShare), "Transfer to dev3 failed");
-    }
+    //     require(token.transfer(dev1, eachShare), "Transfer to dev1 failed");
+    //     require(token.transfer(dev2, eachShare), "Transfer to dev2 failed");
+    //     require(token.transfer(dev3, eachShare), "Transfer to dev3 failed");
+    // }
 }

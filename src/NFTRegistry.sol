@@ -5,74 +5,67 @@ interface IXENNFTContract {
     function ownerOf(uint256) external view returns (address);
 }
 
+interface IXENNFTfactory {
+    function baseDBXeNFTPower(uint256) external view returns (uint256);
+}
+
 contract NFTRegistry {
     struct NFT {
         uint256 tokenId;
-        string category;
+        
     }
 
     struct User {
         NFT[] userNFTs;
-        uint256 userRewards; // Tracks total rewards sebt to user.
+        uint256 userRewards; // Tracks total rewards sent to user.
         uint256 userPoints;
         uint256 lastRewardRatio;
+        uint256 leaderReward;
     }
 
     mapping(address => User) public users;
-    mapping(uint256 => string) private categoryMap;
+    
     mapping(uint256 => address) public currentHolder;
-    mapping(string => uint256) public globalCounters;
+       
+    
 
-    uint256 private constant XUNICORN_MIN_ID = 1;
-    uint256 private constant XUNICORN_MAX_ID = 100;
-    uint256 private constant EXOTIC_MIN_ID = 101;
-    uint256 private constant EXOTIC_MAX_ID = 1000;
-    uint256 private constant LEGENDARY_MIN_ID = 1001;
-    uint256 private constant LEGENDARY_MAX_ID = 3000;
-    uint256 private constant EPIC_MIN_ID = 3001;
-    uint256 private constant EPIC_MAX_ID = 6000;
-    uint256 private constant RARE_MIN_ID = 6001;
-    uint256 private constant RARE_MAX_ID = 10000;
-
-    mapping(uint256 => uint256) private rewardsMap;
     address public nftContractAddress;
+    address public nftFactoryAddress;
+    address public pointLeader; 
     uint256 public totalRewards;
     uint256 public totalPoints;
     uint256 public rewardRatio;
+    uint256 public leaderTotalPoints; 
 
-    uint256 private constant XUNICORN_WEIGHT = 50;
-    uint256 private constant EXOTIC_WEIGHT = 50;
-    uint256 private constant LEGENDARY_WEIGHT = 25;
-    uint256 private constant EPIC_WEIGHT = 10;
-    uint256 private constant RARE_WEIGHT = 5;
-    uint256 private constant COLLECTOR_WEIGHT = 0;
-
-    constructor(address _nftContractAddress) {
+    
+    constructor(address _nftContractAddress, address _nftFactoryAddress) {
         nftContractAddress = _nftContractAddress;
-
-        rewardsMap[XUNICORN_WEIGHT] = 50;
-        rewardsMap[EXOTIC_WEIGHT] = 50;
-        rewardsMap[LEGENDARY_WEIGHT] = 25;
-        rewardsMap[EPIC_WEIGHT] = 10;
-        rewardsMap[RARE_WEIGHT] = 5;
-        rewardsMap[COLLECTOR_WEIGHT] = 0;
+        nftFactoryAddress = _nftFactoryAddress;
 
         // Initialize totalRewards and totalPoints with small non-zero values
-        totalRewards = 1 wei; // 1 wei
+        totalRewards = 1; 
         totalPoints = 1;
+        leaderTotalPoints = 1; 
     }
 
     event NFTRegistered(address indexed user, uint256 tokenId, uint256 rewards);
     event RewardsWithdrawn(address indexed user, uint256 amount);
+    event newPointsLeader(address indexed user, uint256 amount);
     
     receive() external payable {
+        // Split msg.value 50% to rewardRatio and 50% to pointLeader
+        uint256 halfValue = msg.value / 2;
+        rewardRatio += halfValue / totalPoints;
+        users[pointLeader].leaderReward += halfValue;
         totalRewards += msg.value;
-        rewardRatio += msg.value / totalPoints;
     }
 
     function addToPool() external payable {
+        // Split msg.value 50% to rewardRatio and 50% to pointLeader
+        uint256 halfValue = msg.value / 2;
+        rewardRatio += (halfValue / totalPoints);
+        users[pointLeader].leaderReward += halfValue;
         totalRewards += msg.value;
-        rewardRatio += msg.value / totalPoints;
     }
 
     function registerNFT(uint256 tokenId) public {
@@ -128,6 +121,16 @@ contract NFTRegistry {
 
         // Update the NFT ownership
         setNFTOwner(tokenId, player);
+
+        // check for points leader 
+
+        if (currentUserData.userPoints > leaderTotalPoints) {
+            pointLeader = player; 
+            leaderTotalPoints = currentUserData.userPoints;
+
+            emit newPointsLeader(player, currentUserData.userPoints);
+        }
+
         emit NFTRegistered(player, tokenId, rewardPoints);
     }
 
@@ -154,44 +157,26 @@ contract NFTRegistry {
     function setNFTOwner(uint256 tokenId, address owner) private {
         require(currentHolder[tokenId] != owner, "NFT already registered by the caller.");
 
-        string memory category = getCategory(tokenId);
+        
         currentHolder[tokenId] = owner;
 
-        // Increment the global counter for the NFT class
-        globalCounters[category]++;
-
         // Add the token ID to the user's NFTs
-        users[owner].userNFTs.push(NFT(tokenId, category));
+        users[owner].userNFTs.push(NFT(tokenId));
     }
 
     function getNFTOwner(uint256 tokenId) public view returns (address) {
         return currentHolder[tokenId];
     }
 
-    function getCategory(uint256 tokenId) public pure returns (string memory) {
-        if (tokenId >= XUNICORN_MIN_ID && tokenId <= XUNICORN_MAX_ID) {
-            return "Xunicorn";
-        } else if (tokenId >= EXOTIC_MIN_ID && tokenId <= EXOTIC_MAX_ID) {
-            return "Exotic";
-        } else if (tokenId >= LEGENDARY_MIN_ID && tokenId <= LEGENDARY_MAX_ID) {
-            return "Legendary";
-        } else if (tokenId >= EPIC_MIN_ID && tokenId <= EPIC_MAX_ID) {
-            return "Epic";
-        } else if (tokenId >= RARE_MIN_ID && tokenId <= RARE_MAX_ID) {
-            return "Rare";
-        } else if (tokenId > RARE_MAX_ID) {
-            return "Collector";
-        } else {
-            revert("Invalid token ID.");
-        }
-    }
-
+    
     function calculateReward(address user) public view returns (uint256) {
         User storage userData = users[user];
         uint256 lastRewardRatio = userData.lastRewardRatio;
         uint256 newRewards = rewardRatio - lastRewardRatio;
+        uint256 reward = newRewards * userData.userPoints;
 
-        return newRewards * userData.userPoints;
+        
+        return reward;
     }
 
     function withdrawRewards() public payable {
@@ -205,6 +190,7 @@ contract NFTRegistry {
         if(!_isNFTOwner(userData.userNFTs[i].tokenId, player)) {
                     // remove points for this NFT
                     userData.userPoints -= getTokenWeight(userData.userNFTs[i].tokenId);
+                    setNFTOwner(userData.userNFTs[i].tokenId, address(0));
                     // remove NFT from user's list
                     for (uint256 j = i; j < userData.userNFTs.length - 1; j++) {
                         userData.userNFTs[j] = userData.userNFTs[j + 1];
@@ -217,6 +203,9 @@ contract NFTRegistry {
         }
 
         uint256 rewardAmount = calculateReward(player);
+        rewardAmount += userData.leaderReward;
+        userData.leaderReward = 0;
+
         require(rewardAmount > 0, "No new rewards available for withdrawal.");
 
         // Effects
@@ -236,52 +225,33 @@ contract NFTRegistry {
     }
 
     
-    function getTokenWeight(uint256 tokenId) public pure returns (uint256) {
-        if (tokenId >= XUNICORN_MIN_ID && tokenId <= XUNICORN_MAX_ID) {
-            return XUNICORN_WEIGHT;
-        } else if (tokenId >= EXOTIC_MIN_ID && tokenId <= EXOTIC_MAX_ID) {
-            return EXOTIC_WEIGHT;
-        } else if (tokenId >= LEGENDARY_MIN_ID && tokenId <= LEGENDARY_MAX_ID) {
-            return LEGENDARY_WEIGHT;
-        } else if (tokenId >= EPIC_MIN_ID && tokenId <= EPIC_MAX_ID) {
-            return EPIC_WEIGHT;
-        } else if (tokenId >= RARE_MIN_ID && tokenId <= RARE_MAX_ID) {
-            return RARE_WEIGHT;
-        } else if (tokenId > EPIC_MAX_ID) {
-            return COLLECTOR_WEIGHT;
-        } else {
-            revert("Invalid token ID.");
-        }
+    function getTokenWeight(uint256 tokenId) public view returns (uint256) {
+        uint points = IXENNFTfactory(nftFactoryAddress).baseDBXeNFTPower(tokenId) / 1 ether; 
+
+        return points;
     }
 
-    function getUserNFTCounts(address user) external view returns (uint256[] memory) {
-        uint256[] memory nftCounts = new uint256[](6); // Array to store NFT counts for each category
+    function getTotalPointsForUserNFTs(address userAddress) public view returns (uint256) {
+        uint256 usertotalPoints = 0;
+        User storage user = users[userAddress];
 
-        User storage userData = users[user];
-        NFT[] storage userNFTs = userData.userNFTs;
-
-        // Iterate over the user's registered NFTs and count them for each category
-        uint len = userNFTs.length;
-        for (uint256 i = 0; i < len; i++) {
-            NFT storage nft = userNFTs[i];
-            string memory category = nft.category;
-
-            if (keccak256(bytes(category)) == keccak256(bytes("Xunicorn"))) {
-                nftCounts[0]++;
-            } else if (keccak256(bytes(category)) == keccak256(bytes("Exotic"))) {
-                nftCounts[1]++;
-            } else if (keccak256(bytes(category)) == keccak256(bytes("Legendary"))) {
-                nftCounts[2]++;
-            } else if (keccak256(bytes(category)) == keccak256(bytes("Epic"))) {
-                nftCounts[3]++;
-            } else if (keccak256(bytes(category)) == keccak256(bytes("Rare"))) {
-                nftCounts[4]++;
-            } else if (keccak256(bytes(category)) == keccak256(bytes("Collector"))) {
-                nftCounts[5]++;
-            }
+        for (uint256 i = 0; i < user.userNFTs.length; i++) {
+            uint256 tokenId = user.userNFTs[i].tokenId;
+            uint256 points = getTokenWeight(tokenId); // You can define the getTokenWeight function
+            usertotalPoints += points;
         }
 
-        return nftCounts;
+        return usertotalPoints;
+    }
+
+    function getPendingReward(address user) public view returns (uint256) {
+        User storage userData = users[user];
+        uint256 lastRewardRatio = userData.lastRewardRatio;
+        uint256 newRewards = rewardRatio - lastRewardRatio;
+        uint256 reward = newRewards * userData.userPoints;
+        reward += userData.leaderReward;
+        
+        return reward;
     }
 
     function _hasValidOwnership(address user) public view returns (bool) {
