@@ -31,16 +31,19 @@ contract NFTRegistry {
 
     address public nftContractAddress;
     address public nftFactoryAddress;
+    address public devAddress;
     address public pointLeader; 
     uint256 public totalRewards;
     uint256 public totalPoints;
     uint256 public rewardRatio;
-    uint256 public leaderTotalPoints; 
+    uint256 public leaderTotalPoints;
+    uint256 public constant pointsFee = 0.00125 ether; 
 
     
-    constructor(address _nftContractAddress, address _nftFactoryAddress) {
+    constructor(address _nftContractAddress, address _nftFactoryAddress, address _devAddress) {
         nftContractAddress = _nftContractAddress;
         nftFactoryAddress = _nftFactoryAddress;
+        devAddress = _devAddress; 
 
         // Initialize totalRewards and totalPoints with small non-zero values
         totalRewards = 1; 
@@ -52,6 +55,19 @@ contract NFTRegistry {
     event RewardsWithdrawn(address indexed user, uint256 amount);
     event newPointsLeader(address indexed user, uint256 amount);
     
+    modifier transferFee() {
+        _;
+        uint256 poolShare = (msg.value * 250) / 1000;
+        rewardRatio += poolShare / totalPoints;
+        uint256 devShare = msg.value - poolShare; 
+        payable(devAddress).transfer(devShare);
+
+    }
+
+    modifier hasSufficientFee(uint _tokenId) {
+        require(msg.value >= getPointsFee(_tokenId), "Insufficient fee");
+        _;
+    }
     receive() external payable {
         // Split msg.value 50% to rewardRatio and 50% to pointLeader
         uint256 halfValue = msg.value / 2;
@@ -68,7 +84,7 @@ contract NFTRegistry {
         totalRewards += msg.value;
     }
 
-    function registerNFT(uint256 tokenId) public {
+    function registerNFT(uint256 tokenId) public payable hasSufficientFee(tokenId) transferFee {
         address player = msg.sender;
         require(IXENNFTContract(nftContractAddress).ownerOf(tokenId) == player, "You don't own this NFT.");
 
@@ -252,6 +268,14 @@ contract NFTRegistry {
         reward += userData.leaderReward;
         
         return reward;
+    }
+
+    function getPointsFee(uint _tokenId) public view returns (uint256){
+        uint256 points = getTokenWeight(_tokenId);
+        uint256 fee = points * pointsFee;
+
+        return fee;
+
     }
 
     function _hasValidOwnership(address user) public view returns (bool) {

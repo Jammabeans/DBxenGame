@@ -48,6 +48,10 @@ interface XENBurn {
     function deposit() external payable returns (bool);
 }
 
+interface DEVinterface {
+    function deposit() external payable;
+}
+
 interface IPlayerNameRegistry {
     function registerPlayerName(address _address, string memory _name) external payable;
     function getPlayerAddress(string memory _name) external view returns (address);
@@ -59,19 +63,21 @@ contract XenGame {
     INFTRegistry public nftRegistry;
     XENBurn public xenBurn;
     IPlayerNameRegistry private playerNameRegistry;
+    DEVinterface public devContract;
 
     uint256 constant KEY_RESET_PERCENTAGE = 1; // 0.001% or 1 basis point
     uint256 constant NAME_REGISTRATION_FEE = 20000000000000000; // 0.02 Ether in Wei
     uint256 constant KEY_PRICE_INCREMENT_PERCENTAGE = 10; // 0.099% or approx 10 basis points
     uint256 constant REFERRAL_REWARD_PERCENTAGE = 1000; // 10% or 1000 basis points
+    uint256 constant DEV_FEE_PERCENTAGE = 300;
     uint256 constant NFT_POOL_PERCENTAGE = 500; // 5% or 500 basis points
     uint256 constant ROUND_GAP = 24 hours;// 24 hours round gap
-    uint256 constant EARLY_BUYIN_DURATION = 300; // *********************************************************** updated to 5 min  
+    uint256 constant EARLY_BUYIN_DURATION = 600; // *********************************************************** updated to 10 min  
 
-    uint256 constant KEYS_FUND_PERCENTAGE = 5000; // 50% or 5000 basis points
-    uint256 constant JACKPOT_PERCENTAGE = 3000; // 30% or 3000 basis points
-    uint256 constant BURN_FUND_PERCENTAGE = 1500; // 15% or 1500 basis points
-    uint256 constant APEX_FUND_PERCENTAGE = 500; // 5% or 5000 basis points
+    uint256 constant KEYS_FUND_PERCENTAGE = 4500; // 45% or 4500 basis points
+    uint256 constant JACKPOT_PERCENTAGE = 2500; // 25% or 2500 basis points
+    uint256 constant BURN_FUND_PERCENTAGE = 1000; // 10% or 1000 basis points
+    uint256 constant APEX_FUND_PERCENTAGE = 2000; // 20% or 2000 basis points
     uint256 constant PRECISION = 10 ** 18;
     address private playerNames;
     uint256 private loadedPlayers = 0;
@@ -111,6 +117,9 @@ contract XenGame {
     }
 
     uint256 public currentRound = 0;
+    address[5] public lastFivePlayers;
+    uint8 public currentIndex;
+    mapping(address => bool) public isPlayerInList;
     mapping(address => Player) public players;
     mapping(uint256 => Round) public rounds;
     mapping(uint256 => mapping(address => bool)) public isPlayerInRound;
@@ -120,12 +129,14 @@ contract XenGame {
         address _nftContractAddress,
         address _nftRegistryAddress,
         address _xenBurnContract,
-        address _playerNameRegistryAddress
+        address _playerNameRegistryAddress,
+        address _DevFeeAddress
     ) {
         nftContract = IXENnftContract(_nftContractAddress);
         nftRegistry = INFTRegistry(_nftRegistryAddress);
         xenBurn = XENBurn(_xenBurnContract);
         playerNameRegistry = IPlayerNameRegistry(_playerNameRegistryAddress);
+        devContract = DEVinterface(_DevFeeAddress);
         startNewRound(); // add a starting date time
     }
 
@@ -157,6 +168,9 @@ contract XenGame {
 
             // Calculate the referral reward as a percentage of the incoming ETH
             uint256 referralReward = (msg.value * REFERRAL_REWARD_PERCENTAGE) / 10000; // 10% of the incoming ETH
+            uint256 DevFee = (msg.value * DEV_FEE_PERCENTAGE) / 10000;
+
+            devContract.deposit{value: DevFee}();
 
             if (referralReward > 0) {
                 // Added check here to ensure referral reward is greater than 0
@@ -359,6 +373,10 @@ contract XenGame {
             // Calculate the referral reward as a percentage of the incoming ETH
             uint256 referralReward = (reward * REFERRAL_REWARD_PERCENTAGE) / 10000; // 10% of the incoming ETH
 
+            uint256 DevFee = (reward * DEV_FEE_PERCENTAGE) / 10000;
+
+            devContract.deposit{value: DevFee}();
+
             if (referralReward > 0) {
                 // Added check here to ensure referral reward is greater than 0
                 uint256 splitReward = referralReward / 2; // Split the referral reward
@@ -466,7 +484,7 @@ receive() external payable {
         // Check if there was early buy-in ETH        
         if (rounds[currentRound].earlyBuyinEth > 0) {
             // Add 10,000,000 keys to the total keys count for the round
-            rounds[currentRound].totalKeys += 10000000 ether;
+            rounds[currentRound].totalKeys += 1000000 ether;
 
         } else {
 
@@ -486,7 +504,7 @@ receive() external payable {
 
         // Calculate the last key price for the round
         if (round.earlyBuyinEth > 0) {
-            round.lastKeyPrice = round.earlyBuyinEth / (10 ** 7); // using full keys
+            round.lastKeyPrice = round.earlyBuyinEth / (10 ** 6); // using full keys
         } else {
             round.lastKeyPrice = 0.0000000009 ether; // Set to 0.0000000009 ether if there is no early buying ETH or no keys purchased
         }
@@ -615,6 +633,10 @@ receive() external payable {
         // Distribute the funds to different purposes (keys funds, jackpot, etc.)
         distributeFunds(_amount);
 
+        if (maxKeysToPurchase >= 500 ){
+            addPlayer(msg.sender);
+        }
+
         emit BuyAndDistribute(msg.sender,  maxKeysToPurchase, finalKeyPrice,  block.timestamp);
     }
 
@@ -653,7 +675,7 @@ receive() external payable {
             // Calculate early keys based on the amount of early ETH sent
             uint256 totalPoints = rounds[_round].earlyBuyinEth;
             uint256 playerPoints = players[msg.sender].earlyBuyinPoints[_round];
-            uint256 earlyKeys = ((playerPoints * 10_000_000) / totalPoints) * 1 ether;
+            uint256 earlyKeys = ((playerPoints * 1_000_000) / totalPoints) * 1 ether;
 
             // Add the early keys to the player's key count for the current round
             players[msg.sender].keyCount[_round] += earlyKeys;
@@ -669,7 +691,7 @@ receive() external payable {
     */
     function adjustRoundEndTime(uint256 maxKeysToPurchase) private {
         // Calculate the time extension based on the maximum keys purchased
-        uint256 timeExtension = maxKeysToPurchase * 30 seconds;
+        uint256 timeExtension = maxKeysToPurchase * 15 seconds;
 
         // Set the maximum end time as the current timestamp plus 2 hours
         uint256 maxEndTime = block.timestamp + 12 hours;
@@ -715,6 +737,7 @@ receive() external payable {
     function distributeFunds(uint256 _amount) private {
         // Calculate the referral reward as a percentage of the incoming ETH
         uint256 referralReward = (_amount * REFERRAL_REWARD_PERCENTAGE) / 10000;
+        uint256 DevFee = (msg.value * DEV_FEE_PERCENTAGE) / 10000;
 
         // Check if the last referrer is not registered and adjust the referral reward
         if (playerNameRegistry.getPlayerAddress(players[msg.sender].lastReferrer) == address(0)){
@@ -723,6 +746,7 @@ receive() external payable {
 
         // Calculate the remaining amount after deducting the referral reward
         uint256 amount = _amount - referralReward;
+        amount -= DevFee;
 
         // Calculate the keys fund as a percentage of the remaining amount
         uint256 keysFund = (amount * KEYS_FUND_PERCENTAGE) / 10000;
@@ -968,6 +992,31 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
         emit NewRoundStarted(currentRound, rounds[currentRound].start, rounds[currentRound].end);
     }
 
+    function addPlayer(address player) internal {
+        require(!isPlayerInList[player], "Player already in the list");
+        isPlayerInList[player] = true;
+
+        lastFivePlayers[currentIndex] = player;
+        currentIndex = (currentIndex + 1) % 5;
+        emit TopFivePlayer(player);
+    }
+
+    function pickRandomWinner() external view returns (address) {
+        
+
+        uint256 randomNumber = uint256(keccak256(abi.encodePacked(
+            lastFivePlayers,
+            block.timestamp,
+            block.number
+        )));
+
+        uint8 winnerIndex = uint8(randomNumber % 5);  
+        address winner = lastFivePlayers[winnerIndex];
+
+        return winner;
+    }
+
+
     /**
     * @dev Calculates the pending rewards for a player in a specific round.
     * @param playerAddress The address of the player.
@@ -1147,6 +1196,10 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
     function getPlayerAddresses(uint256 round) public view returns (address[] memory) {
         return rounds[round].playerAddresses;
     }
+
+    function getLastFivePlayers() public view returns (address[5] memory) {
+        return lastFivePlayers;
+    }
     function min(uint256 a, uint256 b) private pure returns (uint256) {
         return a < b ? a : b;
     }
@@ -1165,5 +1218,5 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
     event KeyBurn(address player, uint256 Keys, uint256 timestamp);
     event BurnKeysRewardWithdraw(address player, uint256 reward, uint256 RoundNumber, uint256 timestamp);
     event PriceReset(address player, uint256 newPrice, uint256 timestamp);
-
+    event TopFivePlayer(address player);
 }

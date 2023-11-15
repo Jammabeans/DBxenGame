@@ -20,7 +20,7 @@ contract NFTRegistryTest is Test {
 
     function setUp() public {
         nftContract = IxenNFTContract(nftContractAddress);
-        nftRegistry = new NFTRegistry(nftContractAddress, nftFactoryAddress);
+        nftRegistry = new NFTRegistry(nftContractAddress, nftFactoryAddress, address(5));
 
         console.log("Setup complete.");
     }
@@ -42,10 +42,12 @@ contract NFTRegistryTest is Test {
         address holder;
         address currentLeader = nftRegistry.pointLeader();
         holder = NFTowner((_IdNumber));
+        uint fee = nftRegistry.getPointsFee(_IdNumber);
+        vm.deal(holder, fee);
 
         vm.startPrank(holder);
 
-        try nftRegistry.registerNFT(_IdNumber) {}
+        try nftRegistry.registerNFT{value: fee}(_IdNumber) {}
         catch Error(string memory reason) {
             console.log("Error on nft register:", reason);
         } catch (bytes memory) /*lowLevelData*/ {
@@ -59,6 +61,8 @@ contract NFTRegistryTest is Test {
             uint256 NewHighPoints = nftRegistry.getTotalPointsForUserNFTs(postLeader);
             console.log("New High Points", NewHighPoints);
         }
+        console.log("Points registered", nftRegistry.getTokenWeight(_IdNumber));
+        console.log("contract balance", address(nftRegistry).balance);
         pointsState();
         console.log("");
 
@@ -106,11 +110,74 @@ contract NFTRegistryTest is Test {
 
     function testRandomNFTRegistration() public {
         pointsState();
-        uint256 maxID = 10;
+        uint256 maxID = 50;
+        uint totalPoints = 0;
         
         for (uint256 tokenId = 1; tokenId <= maxID; tokenId++) {
             NFTRegistration(tokenId);
+            uint weight = nftRegistry.getTokenWeight(tokenId);
+            console.log("token Id:", tokenId, "token points: ", weight);
+            totalPoints += weight;
         }
+
+        console.log(" ");
+        console.log(" ------------------------------------------------- ");
+        console.log("total nfts ", maxID, "     total Points ", totalPoints);
+        console.log("contract balance", address(nftRegistry).balance );
+    }
+
+    function testAllPointsRegistration() public {
+        pointsState();
+        uint256 maxID = 20;
+        uint totalPoints = 0;
+
+        
+        console.log("Token ID   |   Token Points");
+
+        for (uint256 tokenId = 1; tokenId <= maxID; tokenId++) {
+            
+            uint weight = nftRegistry.getTokenWeight(tokenId);
+            
+            console.log(formatTableRow(tokenId, weight));
+
+            totalPoints += weight;
+        }
+
+        console.log(" ");
+        console.log(" ------------------------------------------------- ");
+        console.log("total nfts ", maxID, "     total Points ", totalPoints);
+        console.log("contract balance", address(nftRegistry).balance);
+    }
+
+    function formatTableRow(uint256 tokenId, uint weight) internal pure returns (string memory) {
+        // Convert uint to string
+        string memory tokenIdStr = uintToString(tokenId);
+        string memory weightStr = uintToString(weight);
+
+        // Calculate padding
+        uint padding = 12; // Adjust as needed based on your data
+
+        // Concatenate strings with padding
+        return string(abi.encodePacked(tokenIdStr, " " , " " , " " , " " , " " , " " , " " , " " , " " , " " , " " , " " , "|", weightStr));
+    }
+
+    function uintToString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 
     function testUserRewardsTracking() public {

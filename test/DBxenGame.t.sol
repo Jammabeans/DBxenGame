@@ -6,6 +6,7 @@ import "forge-std/console.sol";
 
 import "../src/NFTRegistry.sol";
 import "../src/xenBurn.sol";
+import "../src/DeveloperSplitter.sol";
 // import "../src/xenPriceOracle.sol";
 import "../src/PlayerNameRegistry.sol";
 import "../src/DBXenGame.sol";
@@ -20,6 +21,7 @@ contract XenGameTest is Test {
     address public xenCrypto = 0x06450dEe7FD2Fb8E39061434BAbCFC05599a6Fb8;
     NFTRegistry public nftRegistry;
     IxenNFTContract public nftContract;
+    DeveloperSplitter public DevSplit;
     address public nftContractAddress = 0x22c3f74d4AA7c7e11A7637d589026aa85c7AF88a; 
     address public nftFactoryAddress = 0xA06735da049041eb523Ccf0b8c3fB9D36216c646;
     uint256 public initialBalance = 1 ether;
@@ -30,10 +32,12 @@ contract XenGameTest is Test {
         //priceOracleInstance = new PriceOracle();
 
         playerNameRegistry = new PlayerNameRegistry(payable(address(4)), payable(address(5)));
-        nftRegistry = new NFTRegistry(nftContractAddress, nftFactoryAddress);
+        nftRegistry = new NFTRegistry(nftContractAddress, nftFactoryAddress, address(5));
         XenBurnInstance = new xenBurn( xenCrypto, address(playerNameRegistry));
+        DevSplit = new DeveloperSplitter(address(8), address(9), address(10));
         xenGameInstance =
-            new XenGame(nftContractAddress, address(nftRegistry), address(XenBurnInstance), address(playerNameRegistry));
+            new XenGame(nftContractAddress, address(nftRegistry), address(XenBurnInstance), address(playerNameRegistry), address(DevSplit));
+        
 
         console.log("setup ran");
     }
@@ -103,6 +107,7 @@ contract XenGameTest is Test {
         uint256 earlyBuyinEth = xenGameInstance.getRoundEarlyBuyinEth(roundId);
         uint256 lastKeyPrice = xenGameInstance.getRoundLastKeyPrice(roundId);
         uint256 rewardRatio = xenGameInstance.getRoundRewardRatio(roundId);
+        address [5] memory lastFive = xenGameInstance.getLastFivePlayers();
 
         console.log("----------------------------------- STATS REPORT -------------------------------------");
         console.log("Total keys: ", _formatEther(totalKeys));
@@ -117,6 +122,11 @@ contract XenGameTest is Test {
         console.log("Early buyin Eth: ", _formatEther(earlyBuyinEth));
         console.log("Last key price: ", _formatEther(lastKeyPrice));
         console.log("Reward ratio: ", rewardRatio);
+        console.log("top 5 players: ", lastFive[0]);
+        console.log("top 5 players: ", lastFive[1]);
+        console.log("top 5 players: ", lastFive[2]);
+        console.log("top 5 players: ", lastFive[3]);
+        console.log("top 5 players: ", lastFive[4]);
         console.log("");
     }
 
