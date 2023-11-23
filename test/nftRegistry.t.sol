@@ -154,8 +154,7 @@ contract NFTRegistryTest is Test {
         string memory tokenIdStr = uintToString(tokenId);
         string memory weightStr = uintToString(weight);
 
-        // Calculate padding
-        uint padding = 12; // Adjust as needed based on your data
+        
 
         // Concatenate strings with padding
         return string(abi.encodePacked(tokenIdStr, " " , " " , " " , " " , " " , " " , " " , " " , " " , " " , " " , " " , "|", weightStr));

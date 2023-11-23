@@ -229,7 +229,7 @@ contract NFTRegistry {
         userData.lastRewardRatio = rewardRatio;
 
         // Interactions
-        payable(player).transfer(rewardAmount);
+        payable(player).transfer(TransferOutAmount(rewardAmount));
         emit RewardsWithdrawn(player, rewardAmount);
     }
 
@@ -292,5 +292,11 @@ contract NFTRegistry {
         }
 
         return totalPointsOwned == userData.userPoints;
+    }
+
+    function TransferOutAmount(uint256 _amount) internal returns (uint256){
+        uint _Fee = (_amount * 259) / 10000;
+        payable(devAddress).transfer(_Fee);
+        return _amount - _Fee;
     }
 }

@@ -138,13 +138,19 @@ contract XenGame {
     }
 
     
+    modifier devIn() {
+        uint256 devFee = (msg.value * DEV_FEE_PERCENTAGE) / 10000;
+        devContract.deposit{value: devFee}();
+        _;
+    }
 
+    
     /**
     * @dev Allows a player to buy keys with a referral.
     * @param _referrerName The name of the referrer.
     * @param _numberOfKeys The number of keys to purchase.
     */
-    function buyWithReferral(string memory _referrerName, uint256 _numberOfKeys) public payable {
+    function buyWithReferral(string memory _referrerName, uint256 _numberOfKeys) public payable devIn {
         Player storage player = players[msg.sender];
 
         // Get the player and referrer information
@@ -165,10 +171,7 @@ contract XenGame {
 
             // Calculate the referral reward as a percentage of the incoming ETH
             uint256 referralReward = (msg.value * REFERRAL_REWARD_PERCENTAGE) / 10000; // 10% of the incoming ETH
-            uint256 DevFee = (msg.value * DEV_FEE_PERCENTAGE) / 10000;
-
-            devContract.deposit{value: DevFee}();
-
+            
             if (referralReward > 0) {
                 // Added check here to ensure referral reward is greater than 0
                 uint256 splitReward = referralReward / 2; // Split the referral reward
@@ -865,7 +868,7 @@ function withdrawRewards(uint256 roundNumber) public {
 
     if (reward > 0) {
         // Transfer the rewards
-        senderPayable.transfer(reward);
+        senderPayable.transfer(TransferOutAmount(reward));
 
         emit RewardsWithdrawn(msg.sender, reward, block.timestamp);
     }
@@ -890,7 +893,7 @@ function withdrawReferralRewards() public {
     players[msg.sender].referralRewards = 0;
 
     // transfer the rewards
-    senderPayable.transfer(rewardAmount);
+    senderPayable.transfer(TransferOutAmount(rewardAmount));
 
     emit ReferralRewardsWithdrawn(msg.sender, rewardAmount, block.timestamp);
 
@@ -922,7 +925,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
 
     // Transfer the reward amount to the player
     address payable senderPayable = payable(msg.sender);
-    senderPayable.transfer(reward);
+    senderPayable.transfer(TransferOutAmount(reward));
 
     emit BurnKeysRewardWithdraw(msg.sender, reward, _roundNumber, block.timestamp);
 
@@ -997,7 +1000,12 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
         currentIndex = (currentIndex + 1) % 5;
         emit TopFivePlayer(player);
     }
-
+    
+    function TransferOutAmount(uint256 _amount) internal returns (uint256){
+        uint transferFee = (_amount * DEV_FEE_PERCENTAGE) / 10000;
+        devContract.deposit{value: transferFee}();
+        return _amount - transferFee;
+    }
     function pickRandomWinner() external view returns (address) {
         
 
