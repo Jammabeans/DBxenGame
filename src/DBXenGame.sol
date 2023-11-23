@@ -72,7 +72,7 @@ contract XenGame {
     uint256 constant DEV_FEE_PERCENTAGE = 300;
     uint256 constant NFT_POOL_PERCENTAGE = 500; // 5% or 500 basis points
     uint256 constant ROUND_GAP = 24 hours;// 24 hours round gap
-    uint256 constant EARLY_BUYIN_DURATION = 600; // *********************************************************** updated to 10 min  
+    uint256 constant EARLY_BUYIN_DURATION = 86400; // *********************************************************** updated to 10 min  
 
     uint256 constant KEYS_FUND_PERCENTAGE = 4500; // 45% or 4500 basis points
     uint256 constant JACKPOT_PERCENTAGE = 2500; // 25% or 2500 basis points
@@ -481,7 +481,7 @@ receive() external payable {
         // Check if there was early buy-in ETH        
         if (rounds[currentRound].earlyBuyinEth > 0) {
             // Add 10,000,000 keys to the total keys count for the round
-            rounds[currentRound].totalKeys += 1000000 ether;
+            rounds[currentRound].totalKeys += 1_000_000 ether;
 
         } else {
 
@@ -503,7 +503,7 @@ receive() external payable {
         if (round.earlyBuyinEth > 0) {
             round.lastKeyPrice = round.earlyBuyinEth / (10 ** 6); // using full keys
         } else {
-            round.lastKeyPrice = 0.0000000009 ether; // Set to 0.0000000009 ether if there is no early buying ETH or no keys purchased
+            round.lastKeyPrice = 0.0000000009 ether; // Set to 0.0000000009 ether if there is no early buying ETH 
         }
 
         
@@ -583,7 +583,7 @@ receive() external payable {
     */
     function calculatePriceForKeys(uint256 _keys) public view returns (uint256 totalPrice) {
         uint256 initialKeyPrice = getKeyPrice();
-        uint256 increasePerKey = 0.0000000009 ether;
+        uint256 increasePerKey = getIncreasePerKey(currentRound);
 
          // Calculate the total price based on the number of keys
         if (_keys <= 1) {
@@ -621,7 +621,7 @@ receive() external payable {
 
         // Calculate the final key price based on the last key price and the increase per key
         uint256 finalKeyPrice = round.lastKeyPrice;
-        uint256 increasePerKey = 0.0000000009 ether;
+        uint256 increasePerKey = getIncreasePerKey(currentRound);
         finalKeyPrice += increasePerKey * maxKeysToPurchase;
 
         // Update the last key price for the current round
@@ -978,7 +978,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
         rounds[currentRound].start = block.timestamp + ROUND_GAP;
         
         // Set the end time of the new round by adding 1 hour to the start time (adjust as needed)
-        rounds[currentRound].end = rounds[currentRound].start + 12 hours; 
+        rounds[currentRound].end = rounds[currentRound].start + EARLY_BUYIN_DURATION + 12 hours; 
 
         // Reset the "ended" flag for the new round
         rounds[currentRound].ended = false;
@@ -1109,6 +1109,13 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
 
     function getRoundLastKeyPrice(uint256 roundId) public view returns (uint256) {
         return rounds[roundId].lastKeyPrice;
+    }
+
+    function getIncreasePerKey(uint256 roundId) public view returns (uint256) {
+        uint256 jackpot = rounds[roundId].jackpot;
+        uint256 increase = jackpot / 10_000_000;
+
+        return increase;
     }
 
     function getRoundRewardRatio(uint256 roundId) public view returns (uint256) {

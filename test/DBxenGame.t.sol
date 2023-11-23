@@ -72,7 +72,7 @@ contract XenGameTest is Test {
 
         _testGetRoundStats(roundId);
 
-        vm.warp(EarlyKeyBuyinTime + 1000);
+        vm.warp(EarlyKeyBuyinTime + 86401);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), initialETHAmount);
@@ -238,7 +238,7 @@ contract XenGameTest is Test {
 
         _testGetRoundStats(1);
 
-        vm.warp(EarlyKeyBuyinTime + 1000);
+        vm.warp(EarlyKeyBuyinTime + 86401);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), initialETHAmount);
@@ -287,7 +287,7 @@ contract XenGameTest is Test {
 
         //_testGetRoundStats();
 
-        vm.warp(EarlyKeyBuyinTime + 1000);
+        vm.warp(EarlyKeyBuyinTime + 86401);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), 5 ether);
@@ -338,7 +338,7 @@ contract XenGameTest is Test {
 
         _testGetRoundStats(1);
 
-        vm.warp(EarlyKeyBuyinTime + 1000);
+        vm.warp(EarlyKeyBuyinTime + 86401);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), 5 ether);
