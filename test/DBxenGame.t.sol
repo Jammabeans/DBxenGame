@@ -72,7 +72,7 @@ contract XenGameTest is Test {
 
         _testGetRoundStats(roundId);
 
-        vm.warp(EarlyKeyBuyinTime + 500);
+        vm.warp(EarlyKeyBuyinTime + 1000);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), initialETHAmount);
@@ -96,13 +96,13 @@ contract XenGameTest is Test {
 
     function _testGetRoundStats(uint256 roundId) internal view {
         uint256 totalKeys = xenGameInstance.getRoundTotalKeys(roundId);
-        uint256 totalFunds = xenGameInstance.getRoundKeysFunds(roundId);
+        // uint256 totalFunds = xenGameInstance.getRoundKeysFunds(roundId);
         uint256 start = xenGameInstance.getRoundEnd(roundId); // Assuming 'start' is the same as 'end' from your original code
         uint256 end = xenGameInstance.getRoundEnd(roundId);
         address activePlayer = xenGameInstance.getRoundActivePlayer(roundId);
         bool ended = xenGameInstance.getRoundEnded(roundId);
         bool isEarlyBuyin = xenGameInstance.getRoundIsEarlyBuyin(roundId);
-        uint256 keysFunds = xenGameInstance.getRoundKeysFunds(roundId);
+        // uint256 keysFunds = xenGameInstance.getRoundKeysFunds(roundId);
         uint256 jackpot = xenGameInstance.getRoundJackpot(roundId);
         uint256 earlyBuyinEth = xenGameInstance.getRoundEarlyBuyinEth(roundId);
         uint256 lastKeyPrice = xenGameInstance.getRoundLastKeyPrice(roundId);
@@ -110,17 +110,17 @@ contract XenGameTest is Test {
         address [5] memory lastFive = xenGameInstance.getLastFivePlayers();
 
         console.log("----------------------------------- STATS REPORT -------------------------------------");
-        console.log("Total keys: ", _formatEther(totalKeys));
-        console.log("Total funds: ", totalFunds);
+        console.log("Total keys: ", totalKeys);
+        // console.log("Total funds: ", totalFunds);
         console.log("Start: ", start);
         console.log("End: ", end);
         console.log("Active player: ", activePlayer);
         console.log("Ended: ", ended);
         console.log("Is early buyin: ", isEarlyBuyin);
-        console.log("Keys funds: ", keysFunds);
-        console.log("Jackpot: ", _formatEther(jackpot));
-        console.log("Early buyin Eth: ", _formatEther(earlyBuyinEth));
-        console.log("Last key price: ", _formatEther(lastKeyPrice));
+        //console.log("Keys funds: ", keysFunds);
+        console.log("Jackpot: ", jackpot);
+        console.log("Early buyin Eth: ", earlyBuyinEth);
+        console.log("Last key price: ", lastKeyPrice);
         console.log("Reward ratio: ", rewardRatio);
         console.log("top 5 players: ", lastFive[0]);
         console.log("top 5 players: ", lastFive[1]);
@@ -147,8 +147,8 @@ contract XenGameTest is Test {
         console.log("FORMATTED Key Count: ", keyCount / 1 ether);
         console.log("Early Buyin Points: ", earlyBuyinPoints);
         console.log("Referral Rewards: ", referralRewards);
-        console.log("Last Reward Ratio: ", _formatEther(lastRewardRatio));
-        console.log("Key Rewards: ", _formatEther(keyRewards));
+        console.log("Last Reward Ratio: ", lastRewardRatio);
+        console.log("Key Rewards: ", keyRewards);
         console.log("Number of Referrals: ", numberOfReferrals);
         console.log("");
     }
@@ -189,7 +189,7 @@ contract XenGameTest is Test {
             console.log("Low level error on deal");
         }
 
-        _testGetRoundStats(1);
+        //_testGetRoundStats(1);
 
         uint256 EarlyKeyBuyinTime = xenGameInstance.getRoundStart(roundId) + 1;
         console.log("early key buying time", EarlyKeyBuyinTime);
@@ -205,7 +205,7 @@ contract XenGameTest is Test {
             console.log("Low level error on buyWithReferral");
         }
 
-        _testGetRoundStats(1);
+        //_testGetRoundStats(1);
 
         uint256 earlyBuyEth = xenGameInstance.getRoundEarlyBuyin(roundId);
         assertTrue(earlyBuyEth == initialETHAmount * 19 / 20, "No ETH in early buying pool.");
@@ -238,7 +238,7 @@ contract XenGameTest is Test {
 
         _testGetRoundStats(1);
 
-        vm.warp(EarlyKeyBuyinTime + 500);
+        vm.warp(EarlyKeyBuyinTime + 1000);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), initialETHAmount);
@@ -287,7 +287,7 @@ contract XenGameTest is Test {
 
         //_testGetRoundStats();
 
-        vm.warp(EarlyKeyBuyinTime + 500);
+        vm.warp(EarlyKeyBuyinTime + 1000);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), 5 ether);
@@ -336,9 +336,9 @@ contract XenGameTest is Test {
             console.log("Low level error on buyWithReferral");
         }
 
-        //_testGetRoundStats();
+        _testGetRoundStats(1);
 
-        vm.warp(EarlyKeyBuyinTime + 500);
+        vm.warp(EarlyKeyBuyinTime + 1000);
         console.log("------Time Updated ------", block.timestamp);
 
         vm.deal(address(1), 5 ether);
@@ -351,7 +351,7 @@ contract XenGameTest is Test {
             console.log("Low level error on buyWithReferral");
         }
 
-        //_testGetRoundStats();
+        _testGetRoundStats(1);
 
         uint256 keysPurchased = xenGameInstance.getPlayerKeysCount(address(1), 1);
         console.log("keys Purchased formatted:", keysPurchased / 1 ether, "for address", address(1));
@@ -369,7 +369,7 @@ contract XenGameTest is Test {
         catch Error(string memory reason) {
             console.log("Error on withdraw rewards:", reason);
         } catch (bytes memory) /*lowLevelData*/ {
-            console.log("Low level error on withdraw rewards");
+            console.log("***************************Low level error on withdraw rewards**********************************");
         }
 
         console.log("balance of address 2 ending", address(2).balance);
@@ -489,72 +489,7 @@ contract XenGameTest is Test {
         }
     }
 
-    function _formatEther(uint256 value) internal pure returns (string memory) {
-        // Assuming value is in wei, you can convert it to Ether (18 decimal places)
-        uint256 integerPart = value / 1e18;
-        uint256 fractionalPart = value % 1e18;
-        
-        // Convert the integer part to a string
-        string memory integerPartStr = uint256ToStringWithLeadingZeros(integerPart);
-        
-        // Convert the fractional part to a string and remove leading zeros
-        string memory fractionalPartStr = uint256ToStringWithLeadingZeros(fractionalPart);
-        
-        // Combine the integer and fractional parts with the correct format
-        string memory formattedValue = string(abi.encodePacked(integerPartStr, ".", fractionalPartStr));
-        
-        return formattedValue;
-    }
-
-    function uint256ToStringWithLeadingZeros(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        
-        uint256 temp = value;
-        uint256 digits;
-        
-        while (temp > 0) {
-            digits++;
-            temp /= 10;
-        }
-        
-        bytes memory buffer = new bytes(digits);
-        
-        for (uint256 i = 0; i < digits; i++) {
-            buffer[i] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        
-        return string(buffer);
-    }
-
-    function uint256ToString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        
-        uint256 temp = value;
-        uint256 digits;
-        
-        while (temp > 0) {
-            digits++;
-            temp /= 10;
-        }
-        
-        bytes memory buffer = new bytes(digits);
-        
-        while (value > 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        
-        return string(buffer);
-    }
-
-
-
+    
     
 
 

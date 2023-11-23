@@ -80,9 +80,8 @@ contract XenGame {
     uint256 constant APEX_FUND_PERCENTAGE = 2000; // 20% or 2000 basis points
     uint256 constant PRECISION = 10 ** 18;
     address private playerNames;
-    uint256 private loadedPlayers = 0;
-    bool public migrationLocked = false;
-    bool public migrationPhaseTwoCompleted = false;
+    
+    
 
     
     struct Player {
@@ -98,21 +97,17 @@ contract XenGame {
 
     struct Round {
         uint256 totalKeys ;
-        uint256 burntKeys; 
-        
+        uint256 burntKeys;         
         uint256 start;
         uint256 end;
         address activePlayer;
         bool ended;
-        bool isEarlyBuyin;
-        uint256 keysFunds; // not used in logic, old code 
-        uint256 jackpot; // ETH for the jackpot
-        uint256 earlyBuyinEth; // Total ETH received during the early buy-in period
-        uint256 lastKeyPrice; // The last key price for this round
-        uint256 rewardRatio;
-        uint256 BurntKeyFunds;
-        uint256 uniquePlayers;
-        address[] playerAddresses;
+        bool isEarlyBuyin;        
+        uint256 jackpot; 
+        uint256 earlyBuyinEth; 
+        uint256 lastKeyPrice; 
+        uint256 rewardRatio;        
+        uint256 uniquePlayers;       
         
     }
 
@@ -121,6 +116,8 @@ contract XenGame {
     uint8 public currentIndex;
     mapping(address => bool) public isPlayerInList;
     mapping(address => Player) public players;
+    mapping(uint256 => address[]) public uniquePlayers;
+    mapping(uint256 => uint256) public BurntKeyFunds;
     mapping(uint256 => Round) public rounds;
     mapping(uint256 => mapping(address => bool)) public isPlayerInRound;
     mapping(address => mapping(uint256 => bool)) public earlyKeysReceived;
@@ -159,7 +156,7 @@ contract XenGame {
             // Check if the player is not already in the current round
             if (!isPlayerInRound[currentRound][msg.sender]) {
                 // Add the player address to the list of player addresses for the current round
-                round.playerAddresses.push(msg.sender);
+                uniquePlayers[currentRound].push(msg.sender);
                 // Set isPlayerInRound to true for the current player in the current round
                 isPlayerInRound[currentRound][msg.sender] = true;
                 // Increment the uniquePlayers count for the current round
@@ -918,7 +915,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
     require(players[msg.sender].burntKeys[_roundNumber] > 0 , "Player has no burnt Keys rewards.");
 
     // Calculate the reward amount based on the player's burnt keys and the burnt key funds for the round
-    uint256 reward = ((players[msg.sender].burntKeys[_roundNumber] * rounds[_roundNumber].BurntKeyFunds) / rounds[_roundNumber].burntKeys);
+    uint256 reward = ((players[msg.sender].burntKeys[_roundNumber] * BurntKeyFunds[_roundNumber]) / rounds[_roundNumber].burntKeys);
 
     // Reset the burnt keys rewards for the player
     players[msg.sender].burntKeys[_roundNumber] = 0;
@@ -957,7 +954,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
         
 
         // Add to the burntKeysFunds share to the Burnt keys
-        round.BurntKeyFunds += burntKeysFundsShare;
+        BurntKeyFunds[currentRound] += burntKeysFundsShare;
 
         // Set the starting jackpot for the next round
         rounds[currentRound + 1].jackpot = nextRoundJackpot;
@@ -1101,10 +1098,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
         return rounds[roundId].isEarlyBuyin;
     }
 
-    function getRoundKeysFunds(uint256 roundId) public view returns (uint256) {
-        return rounds[roundId].keysFunds;
-    }
-
+    
     function getRoundJackpot(uint256 roundId) public view returns (uint256) {
         return rounds[roundId].jackpot;
     }
@@ -1122,7 +1116,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
     }
 
     function getRoundBurntKeyFunds(uint256 roundId) public view returns (uint256) {
-        return rounds[roundId].BurntKeyFunds;
+        return BurntKeyFunds[roundId];
     }
 
     function getRoundUniquePlayers(uint256 roundId) public view returns (uint256) {
@@ -1130,7 +1124,7 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
     }
 
     function getRoundPlayerAddresses(uint256 roundId) public view returns (address[] memory) {
-        return rounds[roundId].playerAddresses;
+        return uniquePlayers[roundId];
     }
 
     function getRoundIsPlayerInRound(uint256 roundId, address player) public view returns (bool) {
@@ -1189,13 +1183,10 @@ function WithdrawBurntKeyRewards(uint _roundNumber) public {
         return rounds[roundId].earlyBuyinEth;
     }
 
-    function getUniquePlayers(uint256 round) public view returns (uint256) {
-        return rounds[round].uniquePlayers;
-    }
-
-    function getPlayerAddresses(uint256 round) public view returns (address[] memory) {
-        return rounds[round].playerAddresses;
-    }
+    
+    // function getPlayerAddresses(uint256 round) public view returns (address[] memory) {
+    //     return rounds[round].playerAddresses;
+    // }
 
     function getLastFivePlayers() public view returns (address[5] memory) {
         return lastFivePlayers;
