@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 import "../src/NFTRegistry.sol";
+import "../src/DeveloperSplitter.sol";
 
 interface IxenNFTContract {
     function walletOfOwner(address user) external view returns (uint256[] memory);
@@ -13,6 +14,7 @@ interface IxenNFTContract {
 
 contract NFTRegistryTest is Test {
     NFTRegistry public nftRegistry;
+    DeveloperSplitter public devSplit;
     IxenNFTContract public nftContract;
     address public nftContractAddress = 0x22c3f74d4AA7c7e11A7637d589026aa85c7AF88a; 
     address public nftFactoryAddress = 0xA06735da049041eb523Ccf0b8c3fB9D36216c646;

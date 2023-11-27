@@ -94,6 +94,58 @@ contract XenGameTest is Test {
         //_testGetRoundStats();
     }
 
+    function testFailBuyWithReferralTooManyKeys() public {
+        uint256 initialETHAmount = 1.234 ether;
+        uint256 numberOfKeys = 28;
+        uint256 roundId = 1;
+
+        try vm.deal(msg.sender, initialETHAmount) {}
+        catch Error(string memory reason) {
+            console.log("Error on deal:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on deal");
+        }
+
+        _testGetRoundStats(roundId);
+
+        uint256 EarlyKeyBuyinTime = xenGameInstance.getRoundStart(roundId) + 1;
+        console.log("early key buying time", EarlyKeyBuyinTime);
+
+        vm.warp(EarlyKeyBuyinTime);
+
+        console.log("------Time Updated ------", block.timestamp);
+
+        try xenGameInstance.buyWithReferral{value: initialETHAmount}("", numberOfKeys) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(roundId);
+
+        vm.warp(EarlyKeyBuyinTime + 86401);
+        console.log("------Time Updated ------", block.timestamp);
+
+        vm.deal(address(1), initialETHAmount);
+        vm.prank(address(1));
+
+        try xenGameInstance.buyWithReferral{value: initialETHAmount}("", 500000) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(roundId);
+
+        uint256 keysPurchased = xenGameInstance.getPlayerKeysCount(address(1), roundId);
+        console.log("keys Purchased ", keysPurchased, "for address", address(1));
+        assertTrue(keysPurchased > 0, "No keys were purchased.");
+
+        //_testGetRoundStats();
+    }
+
     function _testGetRoundStats(uint256 roundId) internal view {
         uint256 totalKeys = xenGameInstance.getRoundTotalKeys(roundId);
         // uint256 totalFunds = xenGameInstance.getRoundKeysFunds(roundId);
@@ -177,9 +229,69 @@ contract XenGameTest is Test {
         assertTrue(keysPurchased > 0, "No keys were purchased.");
     }
 
+    function testFailBuyWithReferralOnRoundGapNoSetKeys() public {
+        uint256 initialETHAmount = 0.1 ether;
+        uint256 numberOfKeys = 0;
+
+        try vm.deal(msg.sender, initialETHAmount) {}
+        catch Error(string memory reason) {
+            console.log("Error on deal:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on deal");
+        }
+
+        _testGetRoundStats(1);
+
+        try xenGameInstance.buyWithReferral{value: initialETHAmount}("", numberOfKeys) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        uint256 keysPurchased = xenGameInstance.getPlayerKeysCount(msg.sender, 1);
+        assertTrue(keysPurchased > 0, "No keys were purchased.");
+    }
+
     function testBuyEarlyBuyinPoolNoReferral() public {
         uint256 initialETHAmount = 0.1 ether;
         uint256 numberOfKeys = 10;
+        uint256 roundId = 1;
+
+        try vm.deal(msg.sender, initialETHAmount) {}
+        catch Error(string memory reason) {
+            console.log("Error on deal:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on deal");
+        }
+
+        //_testGetRoundStats(1);
+
+        uint256 EarlyKeyBuyinTime = xenGameInstance.getRoundStart(roundId) + 1;
+        console.log("early key buying time", EarlyKeyBuyinTime);
+
+        vm.warp(EarlyKeyBuyinTime);
+
+        console.log("------Time Updated ------", block.timestamp);
+
+        try xenGameInstance.buyWithReferral{value: initialETHAmount}("", numberOfKeys) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        //_testGetRoundStats(1);
+
+        uint256 earlyBuyEth = xenGameInstance.getRoundEarlyBuyin(roundId);
+        assertTrue(earlyBuyEth == initialETHAmount * 19 / 20, "No ETH in early buying pool.");
+
+        console.log("early biyin eth pool amount: ", earlyBuyEth);
+    }
+
+    function testBuyEarlyJustETH() public {
+        uint256 initialETHAmount = 0.1 ether;
+        uint256 numberOfKeys = 0;
         uint256 roundId = 1;
 
         try vm.deal(msg.sender, initialETHAmount) {}
@@ -489,10 +601,210 @@ contract XenGameTest is Test {
         }
     }
 
+    function testWithdrawReferralRewards() public {
+        testPlayerNameRegistryReferralRewards();
+        vm.prank(address(1));
+        xenGameInstance.withdrawReferralRewards();
+    }
+
+    function testWithdrawReferralRewardsWithPlayerNameRewards() public {
+        testPlayerNameRegistryReferralRewards();
+
+        vm.deal(address(21), 5 ether);
+        vm.prank(address(21));
+        xenGameInstance.buyWithReferral{value: 5 ether}("", 0);
+
+        vm.prank(address(1));
+        xenGameInstance.withdrawReferralRewards();
+    }
+
+    function testDevSplit() public {
+        testWithdrawReferralRewardsWithPlayerNameRewards();
+        DevSplit.withdrawEther();
+    }
+
     
-    
+    function testRoundEnd() public {
+        testWithdrawPlayerKeyRewards();
+
+        uint256 roundEndTime = xenGameInstance.getRoundEnd(1);
+        vm.warp(roundEndTime + 1); 
+
+        vm.deal(address(1), 5 ether);
+        vm.prank(address(1));
+
+        try xenGameInstance.buyWithReferral{value: 1 ether}("", 0) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(1);
+    }
+
+    function testRoundEndWithKeys() public {
+        testWithdrawPlayerKeyRewards();
+
+        uint256 roundEndTime = xenGameInstance.getRoundEnd(1);
+        vm.warp(roundEndTime + 1); 
+
+        vm.deal(address(1), 5 ether);
+        vm.prank(address(1));
+
+        try xenGameInstance.buyWithReferral{value: 1 ether}("", 40) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(1);
+    }
+
+    function testExtendTimeRoundEndNoPlayers() public {
+        
+
+        uint256 roundEndTime = xenGameInstance.getRoundEnd(1);
+        vm.warp(roundEndTime + 1); 
+
+        vm.deal(address(1), 5 ether);
+        vm.prank(address(1));
+
+        try xenGameInstance.buyWithReferral{value: 1 ether}("", 0) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(1);
+    }
+
+    function testExtendTimeRoundEndNoPlayersWithKeys() public {
+        
+
+        uint256 roundEndTime = xenGameInstance.getRoundEnd(1);
+        vm.warp(roundEndTime + 1); 
+
+        vm.deal(address(1), 5 ether);
+        vm.prank(address(1));
+
+        try xenGameInstance.buyWithReferral{value: 1 ether}("", 40) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(1);
+    }
 
 
+    function testBuyKeysWithKeyRewards() public {
+        try vm.deal(address(2), 5 ether) {}
+        catch Error(string memory reason) {
+            console.log("Error on deal:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on deal");
+        }
 
+        //_testGetRoundStats();
+
+        uint256 EarlyKeyBuyinTime = xenGameInstance.getRoundStart(1) + 1;
+        console.log("early key buying time", EarlyKeyBuyinTime);
+
+        vm.warp(EarlyKeyBuyinTime);
+
+        console.log("------Time Updated ------", block.timestamp);
+
+        vm.prank(address(2));
+        try xenGameInstance.buyWithReferral{value: 5 ether}("", 28) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(1);
+
+        vm.warp(EarlyKeyBuyinTime + 86401);
+        console.log("------Time Updated ------", block.timestamp);
+
+        vm.deal(address(1), 5 ether);
+        vm.prank(address(1));
+
+        try xenGameInstance.buyWithReferral{value: 1 ether}("", 0) {}
+        catch Error(string memory reason) {
+            console.log("Error on buyWithReferral:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("Low level error on buyWithReferral");
+        }
+
+        _testGetRoundStats(1);
+
+        uint256 keysPurchased = xenGameInstance.getPlayerKeysCount(address(1), 1);
+        console.log("keys Purchased formatted:", keysPurchased / 1 ether, "for address", address(1));
+        assertTrue(keysPurchased > 0, "No keys were purchased.");
+
+        _testGetRoundStats(1);
+        _testGetPlayerInfo(address(1), 1);
+        _testGetPlayerInfo(address(2), 1);
+
+        vm.startPrank(address(2));
+
+        console.log("balance of address 2 starting", address(2).balance);
+
+        try xenGameInstance.buyKeysWithRewards() {}
+        catch Error(string memory reason) {
+            console.log("Error on withdraw rewards:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("***************************Low level error on withdraw rewards**********************************");
+        }
+
+        console.log("balance of address 2 ending", address(2).balance);
+
+        _testGetPlayerInfo(address(2), 1);
+        _testGetRoundStats(1);
+    }
+
+    function testBuyKeysWithRewardsRoundNotStarted() public {
+        vm.startPrank(address(2));
+
+        console.log("balance of address 2 starting", address(2).balance);
+
+        vm.expectRevert();
+        try xenGameInstance.buyKeysWithRewards() {}
+        catch Error(string memory reason) {
+            console.log("Error on buyKeysWithRewards:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("***************************Low level error on withdraw rewards**********************************");
+        }
+
+        
+
+    }
+
+    function testBuyKeysWithRewardsNoRewards() public {
+        uint256 EarlyKeyBuyinTime = xenGameInstance.getRoundStart(1) + 1;
+        console.log("early key buying time", EarlyKeyBuyinTime);
+
+        vm.warp(EarlyKeyBuyinTime);
+
+        vm.startPrank(address(2));
+
+        console.log("balance of address 2 starting", address(2).balance);
+
+        //vm.expectRevert();
+        try xenGameInstance.buyKeysWithRewards() {}
+        catch Error(string memory reason) {
+            console.log("Error on buyKeysWithRewards:", reason);
+        } catch (bytes memory) /*lowLevelData*/ {
+            console.log("***************************Low level error on withdraw rewards**********************************");
+        }
+
+        
+
+    }
 
 }

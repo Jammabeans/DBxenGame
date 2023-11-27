@@ -31,18 +31,18 @@
             <td class="headerValue">lcov.info</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntry">72</td>
-            <td class="headerCovTableEntry">105</td>
-            <td class="headerCovTableEntryLo">68.6 %</td>
+            <td class="headerCovTableEntry">75</td>
+            <td class="headerCovTableEntry">108</td>
+            <td class="headerCovTableEntryLo">69.4 %</td>
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">2023-11-22 23:11:19</td>
+            <td class="headerValue">2023-11-26 23:34:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntry">9</td>
-            <td class="headerCovTableEntry">14</td>
-            <td class="headerCovTableEntryLo">64.3 %</td>
+            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntry">15</td>
+            <td class="headerCovTableEntryLo">66.7 %</td>
           </tr>
           <tr>
             <td></td>
@@ -149,10 +149,10 @@
 <a name="78"><span class="lineNum">      78 </span>                :            : </a>
 <a name="79"><span class="lineNum">      79 </span>                :            :     function addToPool() external payable {</a>
 <a name="80"><span class="lineNum">      80 </span>                :            :         // Split msg.value 50% to rewardRatio and 50% to pointLeader</a>
-<a name="81"><span class="lineNum">      81 </span>                :<span class="lineCov">         12 :         uint256 halfValue = msg.value / 2;</span></a>
-<a name="82"><span class="lineNum">      82 </span>                :<span class="lineCov">         12 :         rewardRatio += (halfValue / totalPoints);</span></a>
-<a name="83"><span class="lineNum">      83 </span>                :<span class="lineCov">         12 :         users[pointLeader].leaderReward += halfValue;</span></a>
-<a name="84"><span class="lineNum">      84 </span>                :<span class="lineCov">         12 :         totalRewards += msg.value;</span></a>
+<a name="81"><span class="lineNum">      81 </span>                :<span class="lineCov">         26 :         uint256 halfValue = msg.value / 2;</span></a>
+<a name="82"><span class="lineNum">      82 </span>                :<span class="lineCov">         26 :         rewardRatio += (halfValue / totalPoints);</span></a>
+<a name="83"><span class="lineNum">      83 </span>                :<span class="lineCov">         26 :         users[pointLeader].leaderReward += halfValue;</span></a>
+<a name="84"><span class="lineNum">      84 </span>                :<span class="lineCov">         26 :         totalRewards += msg.value;</span></a>
 <a name="85"><span class="lineNum">      85 </span>                :            :     }</a>
 <a name="86"><span class="lineNum">      86 </span>                :            : </a>
 <a name="87"><span class="lineNum">      87 </span>                :            :     function registerNFT(uint256 tokenId) public payable hasSufficientFee(tokenId) transferFee {</a>
@@ -300,7 +300,7 @@
 <a name="229"><span class="lineNum">     229 </span>                :<span class="lineCov">         31 :         userData.lastRewardRatio = rewardRatio;</span></a>
 <a name="230"><span class="lineNum">     230 </span>                :            : </a>
 <a name="231"><span class="lineNum">     231 </span>                :            :         // Interactions</a>
-<a name="232"><span class="lineNum">     232 </span>                :<span class="lineCov">         31 :         payable(player).transfer(rewardAmount);</span></a>
+<a name="232"><span class="lineNum">     232 </span>                :<span class="lineCov">         31 :         payable(player).transfer(TransferOutAmount(rewardAmount));</span></a>
 <a name="233"><span class="lineNum">     233 </span>                :<span class="lineCov">         31 :         emit RewardsWithdrawn(player, rewardAmount);</span></a>
 <a name="234"><span class="lineNum">     234 </span>                :            :     }</a>
 <a name="235"><span class="lineNum">     235 </span>                :            : </a>
@@ -364,7 +364,13 @@
 <a name="293"><span class="lineNum">     293 </span>                :            : </a>
 <a name="294"><span class="lineNum">     294 </span>                :<span class="lineCov">         31 :         return totalPointsOwned == userData.userPoints;</span></a>
 <a name="295"><span class="lineNum">     295 </span>                :            :     }</a>
-<a name="296"><span class="lineNum">     296 </span>                :            : }</a>
+<a name="296"><span class="lineNum">     296 </span>                :            : </a>
+<a name="297"><span class="lineNum">     297 </span>                :            :     function TransferOutAmount(uint256 _amount) internal returns (uint256){</a>
+<a name="298"><span class="lineNum">     298 </span>                :<span class="lineCov">         31 :         uint _Fee = (_amount * 259) / 10000;</span></a>
+<a name="299"><span class="lineNum">     299 </span>                :<span class="lineCov">         31 :         payable(devAddress).transfer(_Fee);</span></a>
+<a name="300"><span class="lineNum">     300 </span>                :<span class="lineCov">         31 :         return _amount - _Fee;</span></a>
+<a name="301"><span class="lineNum">     301 </span>                :            :     }</a>
+<a name="302"><span class="lineNum">     302 </span>                :            : }</a>
 </pre>
       </td>
     </tr>

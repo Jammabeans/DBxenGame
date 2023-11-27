@@ -133,6 +133,7 @@ contract XenGame {
         nftRegistry = INFTRegistry(_nftRegistryAddress);
         xenBurn = XENBurn(_xenBurnContract);
         playerNameRegistry = IPlayerNameRegistry(_playerNameRegistryAddress);
+        playerNames = _playerNameRegistryAddress;
         devContract = DEVinterface(_DevFeeAddress);
         startNewRound(); // add a starting date time
     }
@@ -893,7 +894,9 @@ function withdrawReferralRewards() public {
     players[msg.sender].referralRewards = 0;
 
     // transfer the rewards
-    senderPayable.transfer(TransferOutAmount(rewardAmount));
+    //senderPayable.transfer(TransferOutAmount(rewardAmount));
+    senderPayable.call{value: TransferOutAmount(rewardAmount)}("");  // changed for foundry testing**********************************************
+
 
     emit ReferralRewardsWithdrawn(msg.sender, rewardAmount, block.timestamp);
 

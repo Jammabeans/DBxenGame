@@ -28,9 +28,13 @@ contract DeveloperSplitter {
 
         uint256 eachShare = contractBalance / 3;
         
-        payable(dev1).transfer(eachShare);
-        payable(dev2).transfer(eachShare);
-        payable(dev3).transfer(eachShare);
+        // payable(dev1).transfer(eachShare);
+        // payable(dev2).transfer(eachShare);
+        // payable(dev3).transfer(eachShare);
+
+        payable(dev1).call{value: eachShare}("");
+        payable(dev2).call{value: eachShare}("");
+        payable(dev3).call{value: eachShare}("");
     }
 
     // function withdrawERC20(IERC20 token) public {
